@@ -18,4 +18,28 @@ async function iniciarSesion(req, res, next) {
   }
 }
 
-module.exports = { registrar, iniciarSesion };
+async function solicitarRecuperacion(req, res, next) {
+  try {
+    const resultado = await servicio.solicitarRecuperacion(req.body);
+    res.status(200).json({ ok: true, data: resultado });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function restablecerContrasena(req, res, next) {
+  try {
+    const resultado = await servicio.restablecerContrasena(req.body);
+    res.status(200).json({ ok: true, data: resultado });
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+module.exports = {
+  registrar,
+  iniciarSesion,
+  solicitarRecuperacion,
+  restablecerContrasena,
+};

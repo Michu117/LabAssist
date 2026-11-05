@@ -44,7 +44,28 @@ const esquemaRegistro = z
     path: ["confirmar_contrasena"],
   });
 
-// HU-01: inicio de sesión con correo institucional y contraseña.
+const esquemaSolicitarRecuperacion = z
+  .object({
+    correo: esquemaCorreo,
+  })
+  .strict();
+
+const esquemaRestablecerContrasena = z
+  .object({
+    token: z.string().regex(/^[a-f0-9]{64}$/, "Token inválido"),
+    contrasena: esquemaContrasena,
+    confirmar_contrasena: esquemaContrasena,
+  })
+  .strict()
+  .refine(
+    (datos) => datos.contrasena === datos.confirmar_contrasena,
+    {
+      message: "Las contraseñas no coinciden",
+      path: ["confirmar_contrasena"],
+    }
+  );  
+
+  // HU-01: inicio de sesión con correo institucional y contraseña.
 const esquemaLogin = z
   .object({
     correo: esquemaCorreo,
@@ -52,4 +73,10 @@ const esquemaLogin = z
   })
   .strict();
 
-module.exports = { esquemaRegistro, esquemaLogin };
+
+module.exports = {
+  esquemaRegistro,
+  esquemaLogin,
+  esquemaSolicitarRecuperacion,
+  esquemaRestablecerContrasena,
+};
