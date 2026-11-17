@@ -48,4 +48,17 @@ function soloTecnicoDocente(req, res, next) {
   return next();
 }
 
-module.exports = { autenticar, soloTecnicoDocente };
+function sinCambioObligatorio(req, res, next) {
+  if (req.usuario?.debe_cambiar_contrasena) {
+    return next(
+      new ErrorApi(
+        403,
+        "CAMBIO_CONTRASENA_OBLIGATORIO",
+        "Debes cambiar tu contraseña antes de continuar"
+      )
+    );
+  }
+  return next();
+}
+
+module.exports = { autenticar, soloTecnicoDocente, sinCambioObligatorio };

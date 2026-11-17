@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { cambiarContrasena } from "../api/usuarios";
 import { MensajeError, MensajeExito } from "../components/Mensajes";
+import { useAuth } from "../context/AuthContext";
 
 const VACIO = { contrasena_actual: "", contrasena: "", confirmar_contrasena: "" };
 
 export function CambioContrasena() {
   const navigate = useNavigate();
+  const { actualizarUsuario } = useAuth();
   const [formulario, setFormulario] = useState(VACIO);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
@@ -23,6 +25,7 @@ export function CambioContrasena() {
     setCargando(true);
     try {
       await cambiarContrasena(formulario);
+      actualizarUsuario({ debe_cambiar_contrasena: false });
       setExitoso(true);
       setFormulario(VACIO);
       setTimeout(() => navigate("/perfil", { replace: true }), 800);

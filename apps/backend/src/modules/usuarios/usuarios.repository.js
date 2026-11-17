@@ -6,7 +6,8 @@ async function buscarPorId(pool, id) {
             u.nombre,
             u.apellido,
             u.cedula,
-            u.correo,
+             u.correo,
+             c.debe_cambiar_contrasena,
             CASE
               WHEN e.usuario_id IS NOT NULL THEN 'ESTUDIANTE'
               ELSE 'TECNICO_DOCENTE'
@@ -14,6 +15,7 @@ async function buscarPorId(pool, id) {
             e.carrera,
             e.ciclo
        FROM usuario u
+       LEFT JOIN cuenta c ON c.usuario_id = u.id
        LEFT JOIN estudiante e ON e.usuario_id = u.id
       WHERE u.id = $1`,
     [id]
@@ -56,10 +58,10 @@ async function actualizarPerfil(pool, id, datos) {
 }
 
 async function actualizarClave(pool, id, hashClave) {
-  await pool.query("UPDATE cuenta SET clave = $1 WHERE usuario_id = $2", [
-    hashClave,
-    id,
-  ]);
+  await pool.query(
+    "UPDATE cuenta SET clave = $1, debe_cambiar_contrasena = FALSE WHERE usuario_id = $2",
+    [hashClave, id]
+  );
 }
 
 async function listar(pool, { limite, offset, tipo, busqueda }) {

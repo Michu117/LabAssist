@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: API de LabAssist
   description: >
-    API REST del módulo de usuarios (MMR-01) del sistema de registro de
+    API REST de los módulos de usuarios (MMR-01) y biometría (MMR-02) del sistema de registro de
     asistencia y gestión de laboratorios de computación de la Carrera de
     Computación de la UNL.
   version: 0.1.0
@@ -18,6 +18,8 @@ tags:
     description: Consulta y edición del perfil propio
   - name: Usuarios
     description: Administración de usuarios por el Técnico Docente
+  - name: Biometría
+    description: Activación y recepción de capturas biométricas
 
 security: []
 
@@ -43,11 +45,49 @@ paths:
                             type: string
                             example: ok
 
+  /biometria/capturas:
+    post:
+      tags: [Biometría]
+      summary: Activar una captura biométrica
+      security:
+        - bearerAuth: []
+      description: Solo un Técnico Docente puede activar una sesión de captura.
+      responses:
+        "201":
+          description: Captura activada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Exito"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/CapturaActivada"
+
+  /biometria/capturas/{id}:
+    get:
+      tags: [Biometría]
+      summary: Consultar el estado de una captura
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ParamCapturaId"
+      responses:
+        "200":
+          description: Estado de la captura
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exito"
+
   /auth/registro:
     post:
       tags: [Autenticación]
-      summary: Registrar un estudiante (autoregistro)
-      description: Crea el usuario, su fila en estudiante y su cuenta en una transacción.
+      summary: Registrar un estudiante con captura biométrica (Técnico Docente)
+      security:
+        - bearerAuth: []
+      description: Crea el usuario, su fila en estudiante, su cuenta temporal y su huella en una transacción.
       requestBody:
         required: true
         content:
@@ -68,7 +108,7 @@ paths:
                         type: object
                         properties:
                           usuario:
-                            $ref: "#/components/schemas/Usuario"
+                            $ref: "#/components/schemas/UsuarioRegistro"
         "400":
           $ref: "#/components/responses/Validacion"
         "409":
@@ -440,6 +480,14 @@ components:
       schema:
         type: string
         maxLength: 150
+    ParamCapturaId:
+      name: id
+      in: path
+      required: true
+      description: Identificador de la sesión de captura
+      schema:
+        type: string
+        pattern: "^[a-f0-9]{64}$"
 
   schemas:
     TipoUsuario:
@@ -477,6 +525,8 @@ components:
                 - AUTENTICACION
                 - PROHIBIDO
                 - NO_ENCONTRADO
+                - CAPTURA_INVALIDA
+                - CAMBIO_CONTRASENA_OBLIGATORIO
                 - INTERNO
             mensaje:
               type: string
@@ -523,6 +573,28 @@ components:
               type: string
               description: Solo presente en estudiantes
 
+    UsuarioRegistro:
+      allOf:
+        - $ref: "#/components/schemas/Usuario"
+        - type: object
+          required: [contrasena_temporal]
+          properties:
+            contrasena_temporal:
+              type: string
+              description: Contraseña generada por el servidor para el primer acceso
+
+    CapturaActivada:
+      type: object
+      required: [captura_id, estado, dispositivo_id]
+      properties:
+        captura_id:
+          type: string
+        estado:
+          type: string
+          enum: [PENDIENTE]
+        dispositivo_id:
+          type: string
+
     RegistroEntrada:
       type: object
       additionalProperties: false
@@ -531,10 +603,9 @@ components:
         - apellido
         - cedula
         - correo
-        - contrasena
-        - confirmar_contrasena
         - carrera
         - ciclo
+        - captura_id
       properties:
         nombre:
           type: string
@@ -550,20 +621,15 @@ components:
           format: email
           description: Convertido a minúsculas y debe terminar en @unl.edu.ec
           example: ana.perez@unl.edu.ec
-        contrasena:
-          type: string
-          minLength: 8
-          maxLength: 72
-        confirmar_contrasena:
-          type: string
-          minLength: 8
-          maxLength: 72
         carrera:
           type: string
           maxLength: 100
         ciclo:
           type: string
           maxLength: 20
+        captura_id:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
 
     LoginEntrada:
       type: object

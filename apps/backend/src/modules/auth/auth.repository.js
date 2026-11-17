@@ -34,12 +34,14 @@ async function buscarUsuarioPorId(pool, id) {
             u.nombre,
             u.apellido,
             u.cedula,
-            u.correo,
+             u.correo,
+             c.debe_cambiar_contrasena,
             CASE
               WHEN e.usuario_id IS NOT NULL THEN 'ESTUDIANTE'
               WHEN t.usuario_id IS NOT NULL THEN 'TECNICO_DOCENTE'
             END AS tipo
        FROM usuario u
+       LEFT JOIN cuenta c ON c.usuario_id = u.id
        LEFT JOIN estudiante e ON e.usuario_id = u.id
        LEFT JOIN tecnico_docente t ON t.usuario_id = u.id
       WHERE u.id = $1`,
@@ -48,14 +50,29 @@ async function buscarUsuarioPorId(pool, id) {
   return rows[0] || null;
 }
 
-// Crea al estudiante y sus tablas relacionadas en una sola transacción.
-// huella queda en NULL porque está fuera de este avance.
-async function crearEstudiante(pool, datos, hashClave) {
+// Crea al estudiante, su cuenta temporal y su huella en una sola transacción.
+async function crearEstudiante(pool, datos, hashClave, captura) {
   const { nombre, apellido, cedula, correo, carrera, ciclo } = datos;
   const cliente = await pool.connect();
 
   try {
     await cliente.query("BEGIN");
+
+    const capturaResult = await cliente.query(
+      `SELECT plantilla, dispositivo_id
+         FROM biometria_captura
+        WHERE id = $1
+          AND estado = 'COMPLETADA'
+          AND expira_en > NOW()
+        FOR UPDATE`,
+      [captura.id]
+    );
+    if (capturaResult.rows.length === 0) {
+      const error = new Error("La captura biométrica no es válida o expiró");
+      error.codigo = "CAPTURA_INVALIDA";
+      throw error;
+    }
+    const plantilla = capturaResult.rows[0];
 
     const { rows } = await cliente.query(
       `INSERT INTO usuario (nombre, apellido, cedula, correo)
@@ -71,9 +88,19 @@ async function crearEstudiante(pool, datos, hashClave) {
       [usuarioId, carrera, ciclo]
     );
     await cliente.query(
-      `INSERT INTO cuenta (usuario_id, cuenta, clave)
-       VALUES ($1, $2, $3)`,
+      `INSERT INTO cuenta (usuario_id, cuenta, clave, debe_cambiar_contrasena)
+       VALUES ($1, $2, $3, TRUE)`,
       [usuarioId, correo, hashClave]
+    );
+
+    await cliente.query(
+      `INSERT INTO huella_estudiante (usuario_id, plantilla, dispositivo_id)
+       VALUES ($1, $2, $3)`,
+      [usuarioId, plantilla.plantilla, plantilla.dispositivo_id]
+    );
+    await cliente.query(
+      `UPDATE biometria_captura SET estado = 'USADA' WHERE id = $1`,
+      [captura.id]
     );
 
     await cliente.query("COMMIT");

@@ -15,6 +15,13 @@ services:
       timeout: 5s
       retries: 10
 
+  mqtt:
+    image: eclipse-mosquitto:2
+    volumes:
+      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    ports:
+      - "1883:1883"
+
   backend:
     build: ./apps/backend
     command: sh -c "npm run migrate && npm start"
@@ -24,6 +31,10 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      MQTT_URL: mqtt://mqtt:1883
+      MQTT_USERNAME: ${MQTT_USERNAME:-}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+      MQTT_DEVICE_ID: ${MQTT_DEVICE_ID:-esp32-as608-01}
       GMAIL_CLIENT_ID: ${GMAIL_CLIENT_ID:-}
       GMAIL_CLIENT_SECRET: ${GMAIL_CLIENT_SECRET:-}
       GMAIL_REFRESH_TOKEN: ${GMAIL_REFRESH_TOKEN:-}
@@ -38,6 +49,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      mqtt:
+        condition: service_started
 
   frontend:
     build:
