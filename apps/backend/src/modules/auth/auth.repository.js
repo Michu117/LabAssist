@@ -86,10 +86,105 @@ async function crearEstudiante(pool, datos, hashClave) {
   }
 }
 
+async function guardarTokenRecuperacion(pool, usuarioId, tokenHash) {
+  const cliente = await pool.connect();
+
+  try {
+    await cliente.query("BEGIN");
+
+    await cliente.query(
+      `DELETE FROM recuperacion_contrasena
+       WHERE usuario_id = $1`,
+      [usuarioId]
+    );
+
+    await cliente.query(
+      `INSERT INTO recuperacion_contrasena
+       (usuario_id, token_hash, fecha_expiracion)
+       VALUES ($1, $2, NOW() + INTERVAL '15 minutes')`,
+      [usuarioId, tokenHash]
+    );
+
+    await cliente.query("COMMIT");
+  } catch (error) {
+    await cliente.query("ROLLBACK");
+    throw error;
+  } finally {
+    cliente.release();
+  }
+}
+
+async function buscarTokenRecuperacion(pool, tokenHash) {
+  const { rows } = await pool.query(
+    `SELECT usuario_id
+     FROM recuperacion_contrasena
+     WHERE token_hash = $1
+       AND fecha_expiracion > NOW()
+       AND fecha_utilizacion IS NULL`,
+    [tokenHash]
+  );
+
+  return rows[0] || null;
+}
+
+async function actualizarContrasenaConToken(pool, tokenHash, hashClave) {
+  const cliente = await pool.connect();
+
+  try {
+    await cliente.query("BEGIN");
+
+    const { rows } = await cliente.query(
+      `UPDATE recuperacion_contrasena
+       SET fecha_utilizacion = NOW()
+       WHERE token_hash = $1
+         AND fecha_expiracion > NOW()
+         AND fecha_utilizacion IS NULL
+       RETURNING usuario_id`,
+      [tokenHash]
+    );
+
+    if (rows.length === 0) {
+      await cliente.query("ROLLBACK");
+      return false;
+    }
+
+    const usuarioId = rows[0].usuario_id;
+
+    const resultado = await cliente.query(
+      `UPDATE cuenta
+       SET clave = $1
+       WHERE usuario_id = $2`,
+      [hashClave, usuarioId]
+    );
+
+    if (resultado.rowCount !== 1) {
+      throw new Error("No se encontró la cuenta asociada");
+    }
+
+    await cliente.query(
+      `DELETE FROM recuperacion_contrasena
+       WHERE usuario_id = $1
+         AND fecha_utilizacion IS NULL`,
+      [usuarioId]
+    );
+
+    await cliente.query("COMMIT");
+    return true;
+  } catch (error) {
+    await cliente.query("ROLLBACK");
+    throw error;
+  } finally {
+    cliente.release();
+  }
+}
+
 module.exports = {
   buscarPorCedula,
   buscarPorCorreo,
   buscarCuentaPorCorreo,
   buscarUsuarioPorId,
   crearEstudiante,
+  guardarTokenRecuperacion,
+  buscarTokenRecuperacion,
+  actualizarContrasenaConToken,
 };

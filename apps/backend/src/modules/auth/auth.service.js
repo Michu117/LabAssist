@@ -1,11 +1,11 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-
+const crypto = require("node:crypto");
 const config = require("../../config");
 const ErrorApi = require("../../errores");
 const { obtenerPool } = require("../../database/pool");
 const repositorio = require("./auth.repository");
-
+const { enviarCorreoRecuperacion } = require("../../services/gmail.service");
 const COSTO_BCRYPT = 10;
 
 async function registrarEstudiante(datos) {
@@ -86,4 +86,89 @@ async function iniciarSesion({ correo, contrasena }) {
   };
 }
 
-module.exports = { registrarEstudiante, iniciarSesion };
+const DURACION_TOKEN_MS = 15 * 60 * 1000;
+
+function generarTokenRecuperacion() {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+function calcularHashToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+async function solicitarRecuperacion({ correo }) {
+  const pool = obtenerPool();
+
+  const cuenta = await repositorio.buscarCuentaPorCorreo(pool, correo);
+
+  // No revelamos si el correo existe en el sistema.
+  if (!cuenta) {
+    return {
+      mensaje: "Si el correo está registrado, recibirás un enlace de recuperación.",
+    };
+  }
+
+  const token = generarTokenRecuperacion();
+  const tokenHash = calcularHashToken(token);
+
+  await repositorio.guardarTokenRecuperacion(
+    pool,
+    cuenta.usuario_id,
+    tokenHash
+  );
+
+  const enlace = new URL("/restablecer-contrasena", config.frontendUrl);
+  enlace.searchParams.set("token", token);
+
+  await enviarCorreoRecuperacion(correo, enlace.toString());
+
+  return {
+    mensaje: "Si el correo está registrado, recibirás un enlace de recuperación.",
+  };
+}
+
+async function restablecerContrasena({ token, contrasena }) {
+  const pool = obtenerPool();
+
+  const tokenHash = calcularHashToken(token);
+
+  const recuperacion = await repositorio.buscarTokenRecuperacion(
+    pool,
+    tokenHash
+  );
+
+  if (!recuperacion) {
+    throw new ErrorApi(
+      400,
+      "TOKEN_INVALIDO",
+      "El enlace de recuperación es inválido o ha expirado"
+    );
+  }
+
+  const hashClave = await bcrypt.hash(contrasena, COSTO_BCRYPT);
+
+  const actualizado = await repositorio.actualizarContrasenaConToken(
+    pool,
+    tokenHash,
+    hashClave
+  );
+
+  if (!actualizado) {
+    throw new ErrorApi(
+      400,
+      "TOKEN_INVALIDO",
+      "El enlace de recuperación es inválido o ha expirado"
+    );
+  }
+
+  return {
+    mensaje: "Contraseña actualizada correctamente. Ya puedes iniciar sesión.",
+  };
+}
+
+module.exports = {
+  registrarEstudiante,
+  iniciarSesion,
+  solicitarRecuperacion,
+  restablecerContrasena,
+};
