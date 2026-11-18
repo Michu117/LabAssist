@@ -1,25 +1,40 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { registrarEstudiante } from "../api/auth";
+import { consultarCaptura, iniciarCaptura } from "../api/biometria";
 import { MensajeError, MensajeExito } from "../components/Mensajes";
+import { useAuth } from "../context/AuthContext";
 
 const VACIO = {
   nombre: "",
   apellido: "",
   cedula: "",
   correo: "",
-  contrasena: "",
-  confirmar_contrasena: "",
   carrera: "",
   ciclo: "",
 };
 
 export function Registro() {
-  const navigate = useNavigate();
+  const { esTecnico } = useAuth();
   const [formulario, setFormulario] = useState(VACIO);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
   const [exitoso, setExitoso] = useState(false);
+  const [captura, setCaptura] = useState(null);
+  const [credencialTemporal, setCredencialTemporal] = useState(null);
+
+  useEffect(() => {
+    if (!captura || captura.estado !== "PENDIENTE") return undefined;
+    const intervalo = setInterval(async () => {
+      try {
+        const resultado = await consultarCaptura(captura.captura_id);
+        setCaptura((actual) => ({ ...actual, ...resultado.captura }));
+      } catch {
+        // El mensaje principal se muestra al intentar completar el registro.
+      }
+    }, 2000);
+    return () => clearInterval(intervalo);
+  }, [captura]);
 
   function cambiar(evento) {
     setFormulario({ ...formulario, [evento.target.name]: evento.target.value });
@@ -30,9 +45,19 @@ export function Registro() {
     setError(null);
     setCargando(true);
     try {
-      await registrarEstudiante(formulario);
+      if (!captura || captura.estado !== "COMPLETADA") {
+        setError({
+          mensaje: "Primero debes completar la captura de huella",
+          detalles: [],
+        });
+        return;
+      }
+      const resultado = await registrarEstudiante({
+        ...formulario,
+        captura_id: captura.captura_id,
+      });
+      setCredencialTemporal(resultado.usuario.contrasena_temporal);
       setExitoso(true);
-      setTimeout(() => navigate("/login", { replace: true }), 800);
     } catch (err) {
       setError(err);
     } finally {
@@ -40,11 +65,44 @@ export function Registro() {
     }
   }
 
+  async function activarSensor() {
+    setError(null);
+    setCaptura(null);
+    try {
+      const resultado = await iniciarCaptura();
+      setCaptura({ ...resultado, estado: "PENDIENTE" });
+    } catch (err) {
+      setError(err);
+    }
+  }
+
   return (
     <div className="tarjeta">
       <h1>Registro de estudiante</h1>
       <MensajeError error={error} />
-      <MensajeExito mensaje={exitoso ? "Cuenta creada. Inicia sesión para continuar." : null} />
+      <MensajeExito
+        mensaje={exitoso ? "Cuenta creada. Entrega la contraseña temporal al estudiante." : null}
+      />
+      {credencialTemporal && (
+        <p className="mensaje-exito">
+          Contraseña temporal: <strong>{credencialTemporal}</strong>
+        </p>
+      )}
+      {!esTecnico && (
+        <p>Un Técnico Docente debe iniciar la captura biométrica y completar este registro.</p>
+      )}
+      <button type="button" onClick={activarSensor} disabled={!esTecnico || cargando || exitoso}>
+        {captura?.estado === "PENDIENTE" ? "Esperando huella…" : "Activar sensor y capturar huella"}
+      </button>
+      {captura?.estado === "PENDIENTE" && (
+        <p>
+          Captura activa. Esperando la respuesta de la ESP32/AS608...
+        </p>
+      )}
+      {captura?.estado === "COMPLETADA" && <p>Huella capturada correctamente.</p>}
+      {captura?.estado === "ERROR" && (
+        <p role="alert">No se pudo capturar la huella: {captura.error_mensaje}</p>
+      )}
       <form onSubmit={enviar}>
         <div className="fila">
           <label>
@@ -91,40 +149,12 @@ export function Registro() {
             <input name="ciclo" value={formulario.ciclo} onChange={cambiar} placeholder="2026-1" required maxLength={20} />
           </label>
         </div>
-        <div className="fila">
-          <label>
-            Contraseña
-            <input
-              type="password"
-              name="contrasena"
-              value={formulario.contrasena}
-              onChange={cambiar}
-              autoComplete="new-password"
-              minLength={8}
-              maxLength={72}
-              required
-            />
-          </label>
-          <label>
-            Confirmar contraseña
-            <input
-              type="password"
-              name="confirmar_contrasena"
-              value={formulario.confirmar_contrasena}
-              onChange={cambiar}
-              autoComplete="new-password"
-              minLength={8}
-              maxLength={72}
-              required
-            />
-          </label>
-        </div>
         <button type="submit" disabled={cargando || exitoso}>
-          {cargando ? "Creando cuenta…" : "Registrarme"}
+          {cargando ? "Creando cuenta…" : "Registrar estudiante"}
         </button>
       </form>
       <p className="enlaces">
-        <Link to="/login">Ya tengo cuenta</Link>
+        <Link to={esTecnico ? "/usuarios" : "/login"}>Volver</Link>
       </p>
     </div>
   );

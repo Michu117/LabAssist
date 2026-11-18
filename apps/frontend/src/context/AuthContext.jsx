@@ -22,9 +22,23 @@ export function AuthProvider({ children }) {
     setUsuario(null);
   }
 
+  function actualizarUsuario(cambios) {
+    setUsuario((actual) => {
+      const actualizado = { ...actual, ...cambios };
+      localStorage.setItem("usuario", JSON.stringify(actualizado));
+      return actualizado;
+    });
+  }
+
   return (
     <ContextoAuth.Provider
-      value={{ usuario, esTecnico: usuario?.tipo === "TECNICO_DOCENTE", abrirSesion, cerrarSesion }}
+      value={{
+        usuario,
+        esTecnico: usuario?.tipo === "TECNICO_DOCENTE",
+        abrirSesion,
+        cerrarSesion,
+        actualizarUsuario,
+      }}
     >
       {children}
     </ContextoAuth.Provider>

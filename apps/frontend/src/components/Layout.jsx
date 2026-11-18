@@ -16,7 +16,7 @@ export function Layout() {
         <Link to="/" className="logo">LabAssist</Link>
         <nav>
           {!usuario && <Link to="/login">Iniciar sesión</Link>}
-          {!usuario && <Link to="/registro">Registro</Link>}
+          {esTecnico && <Link to="/registro">Registro estudiante</Link>}
           {usuario && <Link to="/perfil">Perfil</Link>}
           {esTecnico && <Link to="/usuarios">Usuarios</Link>}
           {usuario && (

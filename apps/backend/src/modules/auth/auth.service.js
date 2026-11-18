@@ -10,7 +10,15 @@ const COSTO_BCRYPT = 10;
 
 async function registrarEstudiante(datos) {
   const pool = obtenerPool();
-  const { nombre, apellido, cedula, correo, contrasena, carrera, ciclo } = datos;
+  const {
+    nombre,
+    apellido,
+    cedula,
+    correo,
+    carrera,
+    ciclo,
+    captura_id,
+  } = datos;
 
   const [porCedula, porCorreo] = await Promise.all([
     repositorio.buscarPorCedula(pool, cedula),
@@ -24,16 +32,21 @@ async function registrarEstudiante(datos) {
     throw new ErrorApi(409, "CONFLICTO", "El correo ya está registrado");
   }
 
-  const hash = await bcrypt.hash(contrasena, COSTO_BCRYPT);
+  const contrasenaTemporal = crypto.randomBytes(9).toString("base64url");
+  const hash = await bcrypt.hash(contrasenaTemporal, COSTO_BCRYPT);
 
   let id;
   try {
     id = await repositorio.crearEstudiante(
       pool,
       { nombre, apellido, cedula, correo, carrera, ciclo },
-      hash
+      hash,
+      { id: captura_id }
     );
   } catch (error) {
+    if (error.codigo === "CAPTURA_INVALIDA") {
+      throw new ErrorApi(400, "CAPTURA_INVALIDA", error.message);
+    }
     // 23505 = unique_violation: cubre la carrera entre la consulta y la
     // inserción.
     if (error.code === "23505") {
@@ -46,7 +59,17 @@ async function registrarEstudiante(datos) {
     throw error;
   }
 
-  return { id, nombre, apellido, cedula, correo, carrera, ciclo, tipo: "ESTUDIANTE" };
+  return {
+    id,
+    nombre,
+    apellido,
+    cedula,
+    correo,
+    carrera,
+    ciclo,
+    tipo: "ESTUDIANTE",
+    contrasena_temporal: contrasenaTemporal,
+  };
 }
 
 async function iniciarSesion({ correo, contrasena }) {
@@ -76,13 +99,14 @@ async function iniciarSesion({ correo, contrasena }) {
 
   return {
     token,
-    usuario: {
+      usuario: {
       id: usuario.id,
       nombre: usuario.nombre,
       apellido: usuario.apellido,
       correo: usuario.correo,
-      tipo: usuario.tipo,
-    },
+        tipo: usuario.tipo,
+        debe_cambiar_contrasena: usuario.debe_cambiar_contrasena,
+      },
   };
 }
 
