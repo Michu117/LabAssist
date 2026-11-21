@@ -5,9 +5,8 @@
  * Configurar junto a este sketch un archivo local labassist_secrets.h:
  *   #define LAB_WIFI_SSID "..."
  *   #define LAB_WIFI_PASSWORD "..."
- *   #define LAB_MQTT_URI "mqtt://IP_DEL_BROKER:1883"
  *   #define LAB_HMAC_HEX "..."  // 64 caracteres hexadecimales minúsculos
- * Opcionales: LAB_MQTT_USER, LAB_MQTT_PASSWORD, LAB_MQTT_CA_PEM (para mqtts://),
+ * Opcionales: LAB_MQTT_URI, LAB_MQTT_USER, LAB_MQTT_PASSWORD, LAB_MQTT_CA_PEM (para mqtts://),
  * LAB_NTP_SERVER. No usar mqtt:// fuera del entorno local de desarrollo.
  */
 #include <Arduino.h>
@@ -33,7 +32,7 @@
 #define LAB_WIFI_PASSWORD ""
 #endif
 #ifndef LAB_MQTT_URI
-#define LAB_MQTT_URI ""
+#define LAB_MQTT_URI "mqtt://192.168.3.19:1883"
 #endif
 #ifndef LAB_HMAC_HEX
 #define LAB_HMAC_HEX ""
