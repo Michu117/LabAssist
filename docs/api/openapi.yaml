@@ -1,0 +1,722 @@
+openapi: 3.0.3
+info:
+  title: API de LabAssist
+  description: >
+    API REST del módulo de usuarios (MMR-01) del sistema de registro de
+    asistencia y gestión de laboratorios de computación de la Carrera de
+    Computación de la UNL.
+  version: 0.1.0
+
+servers:
+  - url: http://localhost:3000/api/v1
+
+tags:
+  - name: Salud
+  - name: Autenticación
+    description: Registro e inicio de sesión (públicos)
+  - name: Perfil
+    description: Consulta y edición del perfil propio
+  - name: Usuarios
+    description: Administración de usuarios por el Técnico Docente
+
+security: []
+
+paths:
+  /salud:
+    get:
+      tags: [Salud]
+      summary: Comprobación del estado del servicio
+      responses:
+        "200":
+          description: Servicio en funcionamiento
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Exito"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          estado:
+                            type: string
+                            example: ok
+
+  /auth/registro:
+    post:
+      tags: [Autenticación]
+      summary: Registrar un estudiante (autoregistro)
+      description: Crea el usuario, su fila en estudiante y su cuenta en una transacción.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegistroEntrada"
+      responses:
+        "201":
+          description: Estudiante registrado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Exito"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          usuario:
+                            $ref: "#/components/schemas/Usuario"
+        "400":
+          $ref: "#/components/responses/Validacion"
+        "409":
+          $ref: "#/components/responses/Conflicto"
+        "500":
+          $ref: "#/components/responses/Interno"
+
+  /auth/login:
+    post:
+      tags: [Autenticación]
+      summary: Iniciar sesión con correo institucional y contraseña
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginEntrada"
+      responses:
+        "200":
+          description: Sesión iniciada; el cierre se hace en el frontend eliminando el token
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Exito"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [token, usuario]
+                        properties:
+                          token:
+                            type: string
+                            description: JWT que solo contiene `sub` y la expiración
+                          usuario:
+                            $ref: "#/components/schemas/UsuarioResumen"
+        "400":
+          $ref: "#/components/responses/Validacion"
+        "401":
+          $ref: "#/components/responses/Credenciales"
+        "500":
+          $ref: "#/components/responses/Interno"
+
+  /usuarios/me:
+    get:
+      tags: [Perfil]
+      summary: Consultar el perfil propio
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Perfil del usuario autenticado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Exito"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          usuario:
+                            $ref: "#/components/schemas/Usuario"
+        "401":
+          $ref: "#/components/responses/NoAutorizado"
+        "404":
+          $ref: "#/components/responses/NoEncontrado"
+        "500":
+          $ref: "#/components/responses/Interno"
+    patch:
+      tags: [Perfil]
+      summary: Editar el perfil propio
+      description: >
+        Permite editar nombre, apellido y, si es estudiante, carrera y ciclo.
+        No acepta correo, cédula, tipo ni huella.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EditarPerfilEntrada"
+      responses:
+        "200":
+          description: Perfil actualizado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Exito"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          usuario:
+                            $ref: "#/components/schemas/Usuario"
+        "400":
+          $ref: "#/components/responses/Validacion"
+        "401":
+          $ref: "#/components/responses/NoAutorizado"
+        "404":
+          $ref: "#/components/responses/NoEncontrado"
+        "500":
+          $ref: "#/components/responses/Interno"
+
+  /usuarios/me/contrasena:
+    patch:
+      tags: [Perfil]
+      summary: Cambiar la contraseña propia
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CambiarContrasenaEntrada"
+      responses:
+        "200":
+          description: Contraseña actualizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exito"
+        "400":
+          $ref: "#/components/responses/Validacion"
+        "401":
+          description: Token ausente o inválido, o contraseña actual incorrecta
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/Interno"
+
+  /usuarios:
+    get:
+      tags: [Usuarios]
+      summary: Listar usuarios
+      description: Requiere Técnico Docente. Acepta paginación, filtro por tipo y búsqueda.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ParamPagina"
+        - $ref: "#/components/parameters/ParamLimite"
+        - $ref: "#/components/parameters/ParamTipo"
+        - $ref: "#/components/parameters/ParamBusqueda"
+      responses:
+        "200":
+          description: Página de usuarios
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Exito"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        required: [usuarios, total, pagina, limite]
+                        properties:
+                          usuarios:
+                            type: array
+                            items:
+                              $ref: "#/components/schemas/Usuario"
+                          total:
+                            type: integer
+                          pagina:
+                            type: integer
+                          limite:
+                            type: integer
+        "400":
+          $ref: "#/components/responses/Validacion"
+        "401":
+          $ref: "#/components/responses/NoAutorizado"
+        "403":
+          $ref: "#/components/responses/Prohibido"
+        "500":
+          $ref: "#/components/responses/Interno"
+    post:
+      tags: [Usuarios]
+      summary: Crear un usuario Técnico Docente
+      description: Requiere que ya exista al menos un Técnico Docente autenticado.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrearTecnicoEntrada"
+      responses:
+        "201":
+          description: Técnico Docente creado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Exito"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          usuario:
+                            $ref: "#/components/schemas/Usuario"
+        "400":
+          $ref: "#/components/responses/Validacion"
+        "401":
+          $ref: "#/components/responses/NoAutorizado"
+        "403":
+          $ref: "#/components/responses/Prohibido"
+        "409":
+          $ref: "#/components/responses/Conflicto"
+        "500":
+          $ref: "#/components/responses/Interno"
+
+  /usuarios/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ParamId"
+    get:
+      tags: [Usuarios]
+      summary: Consultar un usuario
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Exito"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          usuario:
+                            $ref: "#/components/schemas/Usuario"
+        "400":
+          $ref: "#/components/responses/Validacion"
+        "401":
+          $ref: "#/components/responses/NoAutorizado"
+        "403":
+          $ref: "#/components/responses/Prohibido"
+        "404":
+          $ref: "#/components/responses/NoEncontrado"
+        "500":
+          $ref: "#/components/responses/Interno"
+    patch:
+      tags: [Usuarios]
+      summary: Editar un usuario
+      description: >
+        Permite editar nombre, apellido, cédula y correo (actualizando también
+        cuenta.cuenta en la misma transacción) y, si es estudiante, carrera y
+        ciclo. No permite cambiar el tipo de usuario ni la huella.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EditarUsuarioEntrada"
+      responses:
+        "200":
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Exito"
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          usuario:
+                            $ref: "#/components/schemas/Usuario"
+        "400":
+          $ref: "#/components/responses/Validacion"
+        "401":
+          $ref: "#/components/responses/NoAutorizado"
+        "403":
+          $ref: "#/components/responses/Prohibido"
+        "404":
+          $ref: "#/components/responses/NoEncontrado"
+        "409":
+          $ref: "#/components/responses/Conflicto"
+        "500":
+          $ref: "#/components/responses/Interno"
+    delete:
+      tags: [Usuarios]
+      summary: Eliminar un usuario
+      description: >
+        Eliminación física en este avance. Un Técnico Docente no puede
+        eliminar su propia cuenta.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Usuario eliminado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exito"
+        "400":
+          $ref: "#/components/responses/Validacion"
+        "401":
+          $ref: "#/components/responses/NoAutorizado"
+        "403":
+          $ref: "#/components/responses/Prohibido"
+        "404":
+          $ref: "#/components/responses/NoEncontrado"
+        "409":
+          $ref: "#/components/responses/Conflicto"
+        "500":
+          $ref: "#/components/responses/Interno"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: "Token devuelto por `POST /auth/login`. Encabezado: `Authorization: Bearer <token>`"
+
+  parameters:
+    ParamId:
+      name: id
+      in: path
+      required: true
+      description: Identificador numérico del usuario
+      schema:
+        type: integer
+        minimum: 1
+    ParamPagina:
+      name: pagina
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    ParamLimite:
+      name: limite
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    ParamTipo:
+      name: tipo
+      in: query
+      required: false
+      description: Filtra por el tipo de usuario, derivado de la tabla en la que existe
+      schema:
+        $ref: "#/components/schemas/TipoUsuario"
+    ParamBusqueda:
+      name: busqueda
+      in: query
+      required: false
+      description: Coincidencia parcial sobre nombre, apellido, cédula o correo
+      schema:
+        type: string
+        maxLength: 150
+
+  schemas:
+    TipoUsuario:
+      type: string
+      enum: [ESTUDIANTE, TECNICO_DOCENTE]
+      description: No existe una columna rol; el tipo se deriva de las tablas estudiante y tecnico_docente
+
+    Exito:
+      type: object
+      required: [ok, data]
+      properties:
+        ok:
+          type: boolean
+          example: true
+        data:
+          type: object
+
+    Error:
+      type: object
+      required: [ok, error]
+      properties:
+        ok:
+          type: boolean
+          example: false
+        error:
+          type: object
+          required: [codigo, mensaje, detalles]
+          properties:
+            codigo:
+              type: string
+              enum:
+                - VALIDACION
+                - CONFLICTO
+                - CREDENCIALES
+                - AUTENTICACION
+                - PROHIBIDO
+                - NO_ENCONTRADO
+                - INTERNO
+            mensaje:
+              type: string
+            detalles:
+              type: array
+              items:
+                type: object
+                properties:
+                  campo:
+                    type: string
+                  mensaje:
+                    type: string
+
+    UsuarioResumen:
+      type: object
+      required: [id, nombre, apellido, correo, tipo]
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        nombre:
+          type: string
+        apellido:
+          type: string
+        correo:
+          type: string
+        tipo:
+          $ref: "#/components/schemas/TipoUsuario"
+
+    Usuario:
+      allOf:
+        - $ref: "#/components/schemas/UsuarioResumen"
+        - type: object
+          required: [cedula]
+          properties:
+            cedula:
+              type: string
+              pattern: "^[0-9]{10}$"
+              description: Cédula ecuatoriana válida (provincia y dígito verificador)
+            carrera:
+              type: string
+              description: Solo presente en estudiantes
+            ciclo:
+              type: string
+              description: Solo presente en estudiantes
+
+    RegistroEntrada:
+      type: object
+      additionalProperties: false
+      required:
+        - nombre
+        - apellido
+        - cedula
+        - correo
+        - contrasena
+        - confirmar_contrasena
+        - carrera
+        - ciclo
+      properties:
+        nombre:
+          type: string
+          maxLength: 100
+        apellido:
+          type: string
+          maxLength: 100
+        cedula:
+          type: string
+          pattern: "^[0-9]{10}$"
+        correo:
+          type: string
+          format: email
+          description: Convertido a minúsculas y debe terminar en @unl.edu.ec
+          example: ana.perez@unl.edu.ec
+        contrasena:
+          type: string
+          minLength: 8
+          maxLength: 72
+        confirmar_contrasena:
+          type: string
+          minLength: 8
+          maxLength: 72
+        carrera:
+          type: string
+          maxLength: 100
+        ciclo:
+          type: string
+          maxLength: 20
+
+    LoginEntrada:
+      type: object
+      additionalProperties: false
+      required: [correo, contrasena]
+      properties:
+        correo:
+          type: string
+          format: email
+          example: ana.perez@unl.edu.ec
+        contrasena:
+          type: string
+          minLength: 8
+          maxLength: 72
+
+    EditarPerfilEntrada:
+      type: object
+      additionalProperties: false
+      description: No acepta correo, cédula, tipo ni huella
+      properties:
+        nombre:
+          type: string
+          maxLength: 100
+        apellido:
+          type: string
+          maxLength: 100
+        carrera:
+          type: string
+          maxLength: 100
+          description: Solo si el usuario es estudiante
+        ciclo:
+          type: string
+          maxLength: 20
+          description: Solo si el usuario es estudiante
+
+    CambiarContrasenaEntrada:
+      type: object
+      additionalProperties: false
+      required: [contrasena_actual, contrasena, confirmar_contrasena]
+      properties:
+        contrasena_actual:
+          type: string
+          minLength: 8
+          maxLength: 72
+        contrasena:
+          type: string
+          minLength: 8
+          maxLength: 72
+        confirmar_contrasena:
+          type: string
+          minLength: 8
+          maxLength: 72
+
+    CrearTecnicoEntrada:
+      type: object
+      additionalProperties: false
+      required:
+        - nombre
+        - apellido
+        - cedula
+        - correo
+        - contrasena
+        - confirmar_contrasena
+      properties:
+        nombre:
+          type: string
+          maxLength: 100
+        apellido:
+          type: string
+          maxLength: 100
+        cedula:
+          type: string
+          pattern: "^[0-9]{10}$"
+        correo:
+          type: string
+          format: email
+          example: tecnico@unl.edu.ec
+        contrasena:
+          type: string
+          minLength: 8
+          maxLength: 72
+        confirmar_contrasena:
+          type: string
+          minLength: 8
+          maxLength: 72
+
+    EditarUsuarioEntrada:
+      type: object
+      additionalProperties: false
+      description: No acepta tipo ni huella; la clave solo cambia por /usuarios/me/contrasena
+      properties:
+        nombre:
+          type: string
+          maxLength: 100
+        apellido:
+          type: string
+          maxLength: 100
+        cedula:
+          type: string
+          pattern: "^[0-9]{10}$"
+        correo:
+          type: string
+          format: email
+          description: Se actualiza también cuenta.cuenta en la misma transacción
+        carrera:
+          type: string
+          maxLength: 100
+          description: Solo si el usuario es estudiante
+        ciclo:
+          type: string
+          maxLength: 20
+          description: Solo si el usuario es estudiante
+
+  responses:
+    Validacion:
+      description: Datos inválidos o campos no permitidos
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NoAutorizado:
+      description: Token ausente o inválido
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Credenciales:
+      description: Credenciales de acceso inválidas (mensaje exacto de HU-01)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Prohibido:
+      description: Autenticado sin permiso (usuario que no es Técnico Docente)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NoEncontrado:
+      description: Usuario no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflicto:
+      description: Cédula o correo duplicados, o intento de eliminar la cuenta propia
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Interno:
+      description: Error interno sin detalles técnicos
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"

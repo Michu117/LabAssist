@@ -1,0 +1,24 @@
+CREATE TABLE usuario (
+  id        BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  nombre    VARCHAR(100) NOT NULL,
+  apellido  VARCHAR(100) NOT NULL,
+  cedula    CHAR(10)     NOT NULL UNIQUE,
+  correo    VARCHAR(150) NOT NULL UNIQUE
+);
+
+CREATE TABLE cuenta (
+  usuario_id BIGINT PRIMARY KEY REFERENCES usuario(id) ON DELETE CASCADE,
+  cuenta     VARCHAR(150) NOT NULL UNIQUE,
+  clave      VARCHAR(60)  NOT NULL
+);
+
+CREATE TABLE estudiante (
+  usuario_id BIGINT PRIMARY KEY REFERENCES usuario(id) ON DELETE CASCADE,
+  carrera    VARCHAR(100) NOT NULL,
+  ciclo      VARCHAR(20)  NOT NULL,
+  huella     TEXT NULL
+);
+
+CREATE TABLE tecnico_docente (
+  usuario_id BIGINT PRIMARY KEY REFERENCES usuario(id) ON DELETE CASCADE
+);

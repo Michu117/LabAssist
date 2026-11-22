@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Falta POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:?Falta POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./apps/backend
+    command: sh -c "npm run migrate && npm start"
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      SEED_TECNICO_NOMBRE: ${SEED_TECNICO_NOMBRE:-}
+      SEED_TECNICO_APELLIDO: ${SEED_TECNICO_APELLIDO:-}
+      SEED_TECNICO_CEDULA: ${SEED_TECNICO_CEDULA:-}
+      SEED_TECNICO_CORREO: ${SEED_TECNICO_CORREO:-}
+      SEED_TECNICO_CLAVE: ${SEED_TECNICO_CLAVE:-}
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000/api/v1}
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
