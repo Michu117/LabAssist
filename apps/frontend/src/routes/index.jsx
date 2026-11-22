@@ -8,6 +8,8 @@ import { CambioContrasena } from "../pages/CambioContrasena";
 import { Usuarios } from "../pages/Usuarios";
 import { UsuarioNuevo } from "../pages/UsuarioNuevo";
 import { UsuarioDetalle } from "../pages/UsuarioDetalle";
+import { RecuperarContrasena } from "../pages/RecuperarContrasena";
+import { RestablecerContrasena } from "../pages/RestablecerContrasena";
 
 export function Rutas() {
   return (
@@ -15,6 +17,16 @@ export function Rutas() {
       <Route element={<Layout />}>
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
+
+        <Route
+          path="/recuperar-contrasena"
+          element={<RecuperarContrasena />}
+        />
+
+        <Route
+          path="/restablecer-contrasena"
+          element={<RestablecerContrasena />}
+        />
 
         <Route element={<RutaProtegida />}>
           <Route path="/perfil" element={<Perfil />} />
