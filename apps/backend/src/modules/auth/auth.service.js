@@ -8,7 +8,7 @@ const repositorio = require("./auth.repository");
 const { enviarCorreoRecuperacion } = require("../../services/gmail.service");
 const COSTO_BCRYPT = 10;
 
-async function registrarEstudiante(datos) {
+async function registrarEstudiante(datos, actor) {
   const pool = obtenerPool();
   const {
     nombre,
@@ -41,7 +41,7 @@ async function registrarEstudiante(datos) {
       pool,
       { nombre, apellido, cedula, correo, carrera, ciclo },
       hash,
-      { id: captura_id }
+      { id: captura_id, actor }
     );
   } catch (error) {
     if (error.codigo === "CAPTURA_INVALIDA") {

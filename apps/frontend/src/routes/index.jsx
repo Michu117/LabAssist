@@ -10,6 +10,9 @@ import { UsuarioNuevo } from "../pages/UsuarioNuevo";
 import { UsuarioDetalle } from "../pages/UsuarioDetalle";
 import { RecuperarContrasena } from "../pages/RecuperarContrasena";
 import { RestablecerContrasena } from "../pages/RestablecerContrasena";
+import { Reservas } from "../pages/Reservas";
+import { OcupacionLaboratorio } from "../pages/OcupacionLaboratorio";
+import { GestionLaboratorios } from "../pages/GestionLaboratorios";
 
 export function Rutas() {
   return (
@@ -33,7 +36,13 @@ export function Rutas() {
           <Route path="/perfil/contrasena" element={<CambioContrasena />} />
         </Route>
 
+        <Route element={<RutaProtegida tipo="ESTUDIANTE" />}>
+          <Route path="/reservas" element={<Reservas />} />
+        </Route>
+
         <Route element={<RutaProtegida tipo="TECNICO_DOCENTE" />}>
+          <Route path="/ocupacion" element={<OcupacionLaboratorio />} />
+          <Route path="/laboratorios" element={<GestionLaboratorios />} />
           <Route path="/usuarios" element={<Usuarios />} />
           <Route path="/usuarios/nuevo" element={<UsuarioNuevo />} />
           <Route path="/usuarios/:id" element={<UsuarioDetalle />} />

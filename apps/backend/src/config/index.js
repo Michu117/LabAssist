@@ -8,10 +8,6 @@ const config = {
   mqttUsername: process.env.MQTT_USERNAME || "",
   mqttPassword: process.env.MQTT_PASSWORD || "",
   mqttDeviceId: process.env.MQTT_DEVICE_ID || "esp32-as608-01",
-  mqttCommandTopic:
-    process.env.MQTT_COMMAND_TOPIC || "labassist/biometria/comandos",
-  mqttResultTopic:
-    process.env.MQTT_RESULT_TOPIC || "labassist/biometria/resultados",
 };
 
 module.exports = config;

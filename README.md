@@ -57,10 +57,17 @@ cd LabAssist
 2. Construye y levanta la base de datos, el broker MQTT, el backend y el frontend:
 
    ```bash
+   docker compose up -d --wait db
+   docker compose run --rm --no-deps --build backend npm run migrate
    docker compose up --build -d
    ```
 
-   El backend ejecuta las migraciones en cada arranque; las ya aplicadas no se repiten.
+   Las migraciones se aplican de forma explícita al preparar o actualizar el esquema.
+   Si el historial ya está al día, puedes iniciar los servicios directamente.
+
+   Para habilitar biometría, configura `BIOMETRIA_CLAVES_JSON` en el `.env` local
+   de la raíz o en el entorno de Compose y aprovisiona el lector según el
+   [contrato MQTT](docs/api/contrato-mqtt-biometria.md).
 
 3. Crea el primer Técnico Docente (solo la primera vez; si ya existe, no se duplica):
 
@@ -189,6 +196,7 @@ Prefijo: `/api/v1`. El contrato completo está en [`docs/api/openapi.yaml`](docs
 | DELETE | `/usuarios/:id` | Eliminar usuario | Técnico Docente |
 | POST | `/biometria/capturas` | Activar captura de huella | Técnico Docente |
 | GET | `/biometria/capturas/:id` | Consultar estado de captura | Técnico Docente |
+| POST | `/biometria/identificacion` | Activar el modo de identificación del lector | Técnico Docente |
 
 El flujo MMR-02 requiere que un Técnico Docente active primero una captura en
 `POST /biometria/capturas`. El backend publica una orden por MQTT; la ESP32/AS608
@@ -197,6 +205,12 @@ El formulario solo espera el estado de la captura y luego utiliza su identificad
 interno para crear al estudiante y generar una contraseña temporal.
 
 ### Comunicación con la ESP32
+
+El [contrato MQTT de biometría](docs/api/contrato-mqtt-biometria.md) documenta
+el enrolamiento por slot, la asistencia, la configuración de lectores y la
+autenticación de mensajes. El sketch incluido implementa ese contrato.
+Antes de cargarlo en el ESP32, configura `labassist_secrets.h` localmente
+según las instrucciones de la cabecera del sketch.
 
 La ESP32 debe conectarse al mismo WiFi que el equipo donde se ejecuta Docker y
 al broker MQTT publicado en el puerto `1883`. El sketch se encuentra en
