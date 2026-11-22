@@ -34,9 +34,11 @@ export function Login() {
       abrirSesion(datos.token, datos.usuario);
 
       navigate(
-        datos.usuario.tipo === "TECNICO_DOCENTE"
-          ? "/usuarios"
-          : "/perfil",
+        datos.usuario.debe_cambiar_contrasena
+          ? "/perfil/contrasena"
+          : datos.usuario.tipo === "TECNICO_DOCENTE"
+            ? "/usuarios"
+            : "/perfil",
         { replace: true }
       );
     } catch (err) {

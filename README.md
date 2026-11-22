@@ -14,6 +14,7 @@ Este avance corresponde a **MMR-01: Autenticación y Control de Acceso** (módul
 | Autenticación | JWT (`jsonwebtoken`) y `bcrypt` |
 | Validación | Zod |
 | Pruebas | Jest y Supertest |
+| Mensajería biométrica | MQTT con Mosquitto |
 | Contenedores | Docker y Docker Compose |
 
 ## Estructura
@@ -53,7 +54,7 @@ cd LabAssist
    cp .env.example .env
    ```
 
-2. Construye y levanta la base de datos, el backend y el frontend:
+2. Construye y levanta la base de datos, el broker MQTT, el backend y el frontend:
 
    ```bash
    docker compose up --build -d
@@ -162,7 +163,7 @@ Los estudiantes se registran por su cuenta en `/registro`. Solo un Técnico Doce
 | Ruta | Pantalla | Acceso |
 | --- | --- | --- |
 | `/login` | Inicio de sesión | Público |
-| `/registro` | Registro de estudiante | Público |
+| `/registro` | Registro de estudiante con huella | Técnico Docente |
 | `/perfil` | Perfil y edición | Autenticado |
 | `/perfil/contrasena` | Cambio de contraseña | Autenticado |
 | `/usuarios` | Listado, búsqueda y eliminación | Técnico Docente |
@@ -176,7 +177,7 @@ Prefijo: `/api/v1`. El contrato completo está en [`docs/api/openapi.yaml`](docs
 | Método | Endpoint | Función | Acceso |
 | --- | --- | --- | --- |
 | GET | `/salud` | Estado de la API | Público |
-| POST | `/auth/registro` | Registrar estudiante | Público |
+| POST | `/auth/registro` | Registrar estudiante con huella | Técnico Docente |
 | POST | `/auth/login` | Iniciar sesión | Público |
 | GET | `/usuarios/me` | Consultar perfil propio | Autenticado |
 | PATCH | `/usuarios/me` | Editar perfil propio | Autenticado |
@@ -186,6 +187,30 @@ Prefijo: `/api/v1`. El contrato completo está en [`docs/api/openapi.yaml`](docs
 | GET | `/usuarios/:id` | Consultar usuario | Técnico Docente |
 | PATCH | `/usuarios/:id` | Editar usuario | Técnico Docente |
 | DELETE | `/usuarios/:id` | Eliminar usuario | Técnico Docente |
+| POST | `/biometria/capturas` | Activar captura de huella | Técnico Docente |
+| GET | `/biometria/capturas/:id` | Consultar estado de captura | Técnico Docente |
+
+El flujo MMR-02 requiere que un Técnico Docente active primero una captura en
+`POST /biometria/capturas`. El backend publica una orden por MQTT; la ESP32/AS608
+captura la huella, extrae la plantilla real y publica el resultado al backend.
+El formulario solo espera el estado de la captura y luego utiliza su identificador
+interno para crear al estudiante y generar una contraseña temporal.
+
+### Comunicación con la ESP32
+
+La ESP32 debe conectarse al mismo WiFi que el equipo donde se ejecuta Docker y
+al broker MQTT publicado en el puerto `1883`. El sketch se encuentra en
+`hardware/esp32_as608/esp32_as608.ino`. Configura allí la IP del equipo en
+`MQTT_HOST`; no uses `localhost`, porque desde la ESP32 significa la propia
+placa.
+
+El AS608 se conecta por UART: `TX` del sensor a GPIO27 de la ESP32, `RX` del
+sensor a GPIO26 y ambos dispositivos con `GND` común. Verifica el voltaje de
+alimentación del modelo antes de conectarlo.
+
+El broker incluido está configurado sin autenticación únicamente para desarrollo
+local. Antes de usarlo fuera de una red controlada, configura usuarios, ACL y
+TLS para MQTT.
 
 Las rutas protegidas exigen el encabezado `Authorization: Bearer <token>`.
 

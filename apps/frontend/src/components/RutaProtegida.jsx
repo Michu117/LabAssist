@@ -13,5 +13,11 @@ export function RutaProtegida({ tipo }) {
   if (tipo && usuario.tipo !== tipo) {
     return <Navigate to="/perfil" replace />;
   }
+  if (
+    usuario.debe_cambiar_contrasena &&
+    ubicacion.pathname !== "/perfil/contrasena"
+  ) {
+    return <Navigate to="/perfil/contrasena" replace />;
+  }
   return <Outlet />;
 }

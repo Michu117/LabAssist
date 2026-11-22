@@ -38,3 +38,15 @@ Se ejecuta con `npm run migrate` y registra lo aplicado en la tabla técnica
 
 `Laboratorio`, `Computadora`, `Reportes` y `RegistroAsistencia` y sus
 enumeraciones no se crean en MMR-01.
+
+## MMR-02: biometría
+
+La migración `003_mmr02_biometria.sql` agrega:
+
+- `cuenta.debe_cambiar_contrasena`, para obligar el cambio de la contraseña temporal.
+- `biometria_captura`, que guarda sesiones temporales activadas por un Técnico Docente y su estado MQTT.
+- `huella_estudiante`, que vincula cada estudiante con su plantilla biométrica.
+
+En el alcance actual la plantilla se almacena en PostgreSQL sin cifrado. El
+backend publica la orden por MQTT y la ESP32/AS608 devuelve la plantilla real
+en Base64. La sesión se marca como `USADA` cuando se registra el estudiante.

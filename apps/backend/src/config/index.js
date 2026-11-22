@@ -4,6 +4,14 @@ const config = {
   jwtSecret: process.env.JWT_SECRET || "",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "1h",
   frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173",
+  mqttUrl: process.env.MQTT_URL || "mqtt://localhost:1883",
+  mqttUsername: process.env.MQTT_USERNAME || "",
+  mqttPassword: process.env.MQTT_PASSWORD || "",
+  mqttDeviceId: process.env.MQTT_DEVICE_ID || "esp32-as608-01",
+  mqttCommandTopic:
+    process.env.MQTT_COMMAND_TOPIC || "labassist/biometria/comandos",
+  mqttResultTopic:
+    process.env.MQTT_RESULT_TOPIC || "labassist/biometria/resultados",
 };
 
 module.exports = config;

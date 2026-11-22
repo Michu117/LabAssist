@@ -1,6 +1,10 @@
 const { Router } = require("express");
 
-const { autenticar, soloTecnicoDocente } = require("../../middlewares/autenticar");
+const {
+  autenticar,
+  soloTecnicoDocente,
+  sinCambioObligatorio,
+} = require("../../middlewares/autenticar");
 const { validar } = require("../../middlewares/validar");
 const controlador = require("./usuarios.controller");
 const {
@@ -16,8 +20,8 @@ const router = Router();
 
 // /me se registra antes que /usuarios/:id para que Express no interprete
 // "me" como un identificador.
-router.get("/me", autenticar, controlador.obtenerPerfil);
-router.patch("/me", autenticar, validar(esquemaEditarPerfil), controlador.editarPerfil);
+router.get("/me", autenticar, sinCambioObligatorio, controlador.obtenerPerfil);
+router.patch("/me", autenticar, sinCambioObligatorio, validar(esquemaEditarPerfil), controlador.editarPerfil);
 router.patch(
   "/me/contrasena",
   autenticar,
@@ -29,6 +33,7 @@ router.patch(
 router.get(
   "/",
   autenticar,
+  sinCambioObligatorio,
   soloTecnicoDocente,
   validar(esquemaListarUsuarios, "query"),
   controlador.listar
@@ -36,6 +41,7 @@ router.get(
 router.post(
   "/",
   autenticar,
+  sinCambioObligatorio,
   soloTecnicoDocente,
   validar(esquemaCrearTecnico),
   controlador.crear
@@ -43,6 +49,7 @@ router.post(
 router.get(
   "/:id",
   autenticar,
+  sinCambioObligatorio,
   soloTecnicoDocente,
   validar(esquemaId, "params"),
   controlador.consultar
@@ -50,6 +57,7 @@ router.get(
 router.patch(
   "/:id",
   autenticar,
+  sinCambioObligatorio,
   soloTecnicoDocente,
   validar(esquemaId, "params"),
   validar(esquemaEditarUsuario),
@@ -58,6 +66,7 @@ router.patch(
 router.delete(
   "/:id",
   autenticar,
+  sinCambioObligatorio,
   soloTecnicoDocente,
   validar(esquemaId, "params"),
   controlador.eliminar
