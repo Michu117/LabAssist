@@ -1,0 +1,68 @@
+.ocupacion section {
+  margin-top: 1.5rem;
+}
+
+.ocupacion-resumen {
+  margin-top: 1rem;
+}
+
+.ocupacion-plano {
+  overflow: auto;
+}
+
+.ocupacion-cuadricula,
+.ocupacion-sin-ubicacion {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ocupacion-cuadricula {
+  grid-auto-columns: minmax(7rem, 1fr);
+}
+
+.ocupacion-sin-ubicacion {
+  grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
+}
+
+.ocupacion-equipo {
+  display: grid;
+  align-content: start;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  padding: 0.55rem;
+  overflow-wrap: anywhere;
+}
+
+.ocupacion-equipo[data-estado="Disponible"] {
+  background: var(--color-exito-fondo);
+  color: var(--color-exito);
+}
+
+.ocupacion-equipo[data-estado="Reservada"] {
+  background: var(--color-fondo);
+  color: var(--color-primario-oscuro);
+}
+
+.ocupacion-equipo[data-estado="Ocupada"] {
+  background: var(--color-primario-oscuro);
+  color: var(--color-tarjeta);
+}
+
+.ocupacion-equipo[data-estado="Inactiva"] {
+  background: var(--color-error-fondo);
+  color: var(--color-error);
+}
+
+.ocupacion-equipo button {
+  display: grid;
+  width: 100%;
+  margin: 0;
+  text-align: left;
+}
+
+.ocupacion-equipo button[aria-pressed="true"] {
+  outline: 2px solid var(--color-tarjeta);
+}

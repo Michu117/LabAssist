@@ -9,6 +9,10 @@ const {
 } = require("./biometria.schemas");
 
 const router = Router();
+router.use((_req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
 
 // El técnico activa una captura. El backend ordena la captura por MQTT.
 router.post(
@@ -24,6 +28,14 @@ router.get(
   soloTecnicoDocente,
   validar(esquemaIdCaptura, "params"),
   controlador.consultar
+);
+
+router.post(
+  "/identificacion",
+  autenticar,
+  soloTecnicoDocente,
+  validar(esquemaIniciarCaptura),
+  controlador.identificar
 );
 
 module.exports = router;

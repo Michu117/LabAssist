@@ -14,11 +14,20 @@ async function iniciar(req, res, next) {
 
 async function consultar(req, res, next) {
   try {
-    const captura = await servicio.consultarCaptura(req.params.id);
+    const captura = await servicio.consultarCaptura(req.params.id, req.usuario.id);
     res.status(200).json({ ok: true, data: { captura } });
   } catch (error) {
     next(error);
   }
 }
 
-module.exports = { iniciar, consultar };
+async function identificar(req, res, next) {
+  try {
+    const modo = await servicio.iniciarIdentificacion(req.body.dispositivo_id);
+    res.status(202).json({ ok: true, data: modo });
+  } catch (error) {
+    next(error);
+  }
+}
+
+module.exports = { iniciar, consultar, identificar };
