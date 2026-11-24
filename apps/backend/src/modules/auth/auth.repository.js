@@ -59,12 +59,13 @@ async function crearEstudiante(pool, datos, hashClave, captura) {
     await cliente.query("BEGIN");
 
     const capturaResult = await cliente.query(
-      `UPDATE biometria_captura SET estado = 'USADA'
-        WHERE id = $1 AND creada_por = $2 AND slot IS NOT NULL
+      `SELECT plantilla, dispositivo_id
+         FROM biometria_captura
+        WHERE id = $1
           AND estado = 'COMPLETADA'
-          AND expira_en > clock_timestamp()
-        RETURNING plantilla, dispositivo_id, slot`,
-      [captura.id, captura.actor]
+          AND expira_en > NOW()
+        FOR UPDATE`,
+      [captura.id]
     );
     if (capturaResult.rows.length === 0) {
       const error = new Error("La captura biométrica no es válida o expiró");
@@ -93,10 +94,15 @@ async function crearEstudiante(pool, datos, hashClave, captura) {
     );
 
     await cliente.query(
-      `INSERT INTO huella_estudiante (usuario_id, plantilla, dispositivo_id, slot)
-       VALUES ($1, $2, $3, $4)`,
-      [usuarioId, plantilla.plantilla, plantilla.dispositivo_id, plantilla.slot]
+      `INSERT INTO huella_estudiante (usuario_id, plantilla, dispositivo_id)
+       VALUES ($1, $2, $3)`,
+      [usuarioId, plantilla.plantilla, plantilla.dispositivo_id]
     );
+    await cliente.query(
+      `UPDATE biometria_captura SET estado = 'USADA' WHERE id = $1`,
+      [captura.id]
+    );
+
     await cliente.query("COMMIT");
     return usuarioId;
   } catch (error) {

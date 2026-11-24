@@ -21,32 +21,19 @@ export function Registro() {
   const [error, setError] = useState(null);
   const [exitoso, setExitoso] = useState(false);
   const [captura, setCaptura] = useState(null);
-  const [activando, setActivando] = useState(false);
   const [credencialTemporal, setCredencialTemporal] = useState(null);
 
   useEffect(() => {
     if (!captura || captura.estado !== "PENDIENTE") return undefined;
-    let vigente = true;
-    let temporizador;
-    async function actualizar() {
+    const intervalo = setInterval(async () => {
       try {
         const resultado = await consultarCaptura(captura.captura_id);
-        if (vigente) setCaptura({ ...captura, ...resultado.captura });
-      } catch (err) {
-        if (!vigente) return;
-        if (err.status === 404 || err.status === 403) {
-          setError(err);
-          setCaptura(null);
-        } else {
-          temporizador = setTimeout(actualizar, 2000);
-        }
+        setCaptura((actual) => ({ ...actual, ...resultado.captura }));
+      } catch {
+        // El mensaje principal se muestra al intentar completar el registro.
       }
-    }
-    temporizador = setTimeout(actualizar, 2000);
-    return () => {
-      vigente = false;
-      clearTimeout(temporizador);
-    };
+    }, 2000);
+    return () => clearInterval(intervalo);
   }, [captura]);
 
   function cambiar(evento) {
@@ -81,14 +68,11 @@ export function Registro() {
   async function activarSensor() {
     setError(null);
     setCaptura(null);
-    setActivando(true);
     try {
       const resultado = await iniciarCaptura();
-      setCaptura(resultado);
+      setCaptura({ ...resultado, estado: "PENDIENTE" });
     } catch (err) {
       setError(err);
-    } finally {
-      setActivando(false);
     }
   }
 
@@ -107,8 +91,7 @@ export function Registro() {
       {!esTecnico && (
         <p>Un Técnico Docente debe iniciar la captura biométrica y completar este registro.</p>
       )}
-      <button type="button" onClick={activarSensor}
-        disabled={!esTecnico || cargando || exitoso || activando || captura?.estado === "PENDIENTE"}>
+      <button type="button" onClick={activarSensor} disabled={!esTecnico || cargando || exitoso}>
         {captura?.estado === "PENDIENTE" ? "Esperando huella…" : "Activar sensor y capturar huella"}
       </button>
       {captura?.estado === "PENDIENTE" && (
@@ -117,7 +100,6 @@ export function Registro() {
         </p>
       )}
       {captura?.estado === "COMPLETADA" && <p>Huella capturada correctamente.</p>}
-      {captura?.estado === "EXPIRADA" && <p role="alert">La captura venció. Activa el sensor para volver a intentarlo.</p>}
       {captura?.estado === "ERROR" && (
         <p role="alert">No se pudo capturar la huella: {captura.error_mensaje}</p>
       )}

@@ -1,7 +1,7 @@
 import { api } from "./cliente";
 
 export function iniciarCaptura() {
-  return api.post("/biometria/capturas", {});
+  return api.post("/biometria/capturas");
 }
 
 export function consultarCaptura(id) {

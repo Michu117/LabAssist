@@ -2,7 +2,7 @@ const servicio = require("./auth.service");
 
 async function registrar(req, res, next) {
   try {
-    const usuario = await servicio.registrarEstudiante(req.body, req.usuario.id);
+    const usuario = await servicio.registrarEstudiante(req.body);
     res.status(201).json({ ok: true, data: { usuario } });
   } catch (error) {
     next(error);
