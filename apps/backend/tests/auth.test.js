@@ -110,10 +110,10 @@ const mensajeCredenciales = "Credenciales de acceso inválidas";
       expect(res.body.error.codigo).toBe("CONFLICTO");
     });
 
-    it("rechaza una cédula con dígito verificador inválido con 400", async () => {
+    it("rechaza una cédula que no tiene 10 dígitos con 400", async () => {
       const res = await request(app)
         .post("/api/v1/auth/registro")
-        .send({ ...registroValido, cedula: "0100000000" });
+        .send({ ...registroValido, cedula: "010000000" });
 
       expect(res.status).toBe(400);
       expect(res.body.error.codigo).toBe("VALIDACION");
@@ -122,10 +122,10 @@ const mensajeCredenciales = "Credenciales de acceso inválidas";
       );
     });
 
-    it("rechaza una cédula con provincia inválida con 400", async () => {
+    it("rechaza una cédula de 11 dígitos con 400", async () => {
       const res = await request(app)
         .post("/api/v1/auth/registro")
-        .send({ ...registroValido, cedula: "9900000002" });
+        .send({ ...registroValido, cedula: "01000000099" });
 
       expect(res.status).toBe(400);
       expect(res.body.error.codigo).toBe("VALIDACION");

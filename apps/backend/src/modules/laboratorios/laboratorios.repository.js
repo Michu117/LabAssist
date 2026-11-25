@@ -46,4 +46,43 @@ async function generarComputadoras(db, laboratorioId, cantidad) {
   return rowCount;
 }
 
-module.exports = { listar, consultarComputadoras, insertarLaboratorio, generarComputadoras };
+async function listarLectores(db) {
+  const { rows } = await db.query(
+    `SELECT b.id, b.capacidad, b.habilitado, b.laboratorio_id,
+            l.codigo AS laboratorio_codigo, l.nombre AS laboratorio_nombre
+       FROM biometria_lector b
+       LEFT JOIN laboratorio l ON l.id = b.laboratorio_id
+      ORDER BY b.id`
+  );
+  return rows;
+}
+
+async function insertarLector(db, id, capacidad, laboratorioId) {
+  const { rows } = await db.query(
+    `INSERT INTO biometria_lector (id, capacidad, laboratorio_id)
+     VALUES ($1, $2, $3)
+     RETURNING id, capacidad, habilitado, laboratorio_id`,
+    [id, capacidad, laboratorioId ?? null]
+  );
+  return rows[0];
+}
+
+async function asignarLector(db, id, laboratorioId) {
+  const { rows } = await db.query(
+    `UPDATE biometria_lector SET laboratorio_id = $2
+      WHERE id = $1
+      RETURNING id, capacidad, habilitado, laboratorio_id`,
+    [id, laboratorioId ?? null]
+  );
+  return rows[0];
+}
+
+module.exports = {
+  listar,
+  consultarComputadoras,
+  insertarLaboratorio,
+  generarComputadoras,
+  listarLectores,
+  insertarLector,
+  asignarLector,
+};

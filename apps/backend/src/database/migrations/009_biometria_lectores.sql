@@ -1,6 +1,6 @@
 CREATE TABLE biometria_lector (
   id VARCHAR(100) PRIMARY KEY CHECK (id ~ '^[A-Za-z0-9_-]{1,100}$'),
-  laboratorio_id BIGINT NOT NULL REFERENCES laboratorio(id),
+  laboratorio_id BIGINT REFERENCES laboratorio(id),
   capacidad INTEGER NOT NULL CHECK (capacidad BETWEEN 1 AND 65535),
   habilitado BOOLEAN NOT NULL DEFAULT TRUE
 );

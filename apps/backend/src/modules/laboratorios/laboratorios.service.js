@@ -35,4 +35,35 @@ async function crear({ codigo, nombre, cantidad_computadoras: cantidad }) {
   }
 }
 
-module.exports = { listar, consultarComputadoras, crear };
+function listarLectores() {
+  return repositorio.listarLectores(obtenerPool());
+}
+
+async function crearLector({ id, capacidad, laboratorio_id: laboratorioId }) {
+  try {
+    return await repositorio.insertarLector(obtenerPool(), id, capacidad, laboratorioId);
+  } catch (error) {
+    if (error.code === "23505") {
+      throw new ErrorApi(409, "LECTOR_DUPLICADO", "Ya existe un lector con ese identificador");
+    }
+    if (error.code === "23503") {
+      throw new ErrorApi(404, "LABORATORIO_NO_ENCONTRADO", "No se encontró el laboratorio");
+    }
+    throw error;
+  }
+}
+
+async function asignarLector(id, laboratorioId) {
+  try {
+    const lector = await repositorio.asignarLector(obtenerPool(), id, laboratorioId);
+    if (!lector) throw new ErrorApi(404, "LECTOR_NO_ENCONTRADO", "No se encontró el lector");
+    return lector;
+  } catch (error) {
+    if (error.code === "23503") {
+      throw new ErrorApi(404, "LABORATORIO_NO_ENCONTRADO", "No se encontró el laboratorio");
+    }
+    throw error;
+  }
+}
+
+module.exports = { listar, consultarComputadoras, crear, listarLectores, crearLector, asignarLector };

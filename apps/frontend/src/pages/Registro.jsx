@@ -117,9 +117,11 @@ export function Registro() {
         </p>
       )}
       {captura?.estado === "COMPLETADA" && <p>Huella capturada correctamente.</p>}
-      {captura?.estado === "EXPIRADA" && <p role="alert">La captura venció. Activa el sensor para volver a intentarlo.</p>}
+      {captura?.estado === "EXPIRADA" && (
+        <p className="error" role="alert">La captura venció. Activa el sensor para volver a intentarlo.</p>
+      )}
       {captura?.estado === "ERROR" && (
-        <p role="alert">No se pudo capturar la huella: {captura.error_mensaje}</p>
+        <p className="error" role="alert">No se pudo capturar la huella: {captura.error_mensaje}</p>
       )}
       <form onSubmit={enviar}>
         <div className="fila">

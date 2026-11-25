@@ -6,6 +6,7 @@ export class ErrorApi extends Error {
     super(mensaje);
     this.status = status;
     this.codigo = codigo;
+    this.mensaje = mensaje;
     this.detalles = detalles;
   }
 }

@@ -13,4 +13,24 @@ const esquemaLaboratorio = z.object({
     .pipe(z.number().int().positive().max(Number.MAX_SAFE_INTEGER)),
 });
 
-module.exports = { esquemaCrear, esquemaLaboratorio };
+const esquemaLectorId = z.object({
+  lectorId: z.string().regex(/^[A-Za-z0-9_-]{1,100}$/, "El identificador del lector no es válido"),
+});
+
+const esquemaLector = z.object({
+  id: z.string().regex(/^[A-Za-z0-9_-]{1,100}$/, "El identificador del lector no es válido"),
+  capacidad: z.number().int().min(1).max(65535),
+  laboratorio_id: z.number().int().positive().nullable().optional(),
+}).strict();
+
+const esquemaAsignarLector = z.object({
+  laboratorio_id: z.number().int().positive().nullable(),
+}).strict();
+
+module.exports = {
+  esquemaCrear,
+  esquemaLaboratorio,
+  esquemaLectorId,
+  esquemaLector,
+  esquemaAsignarLector,
+};

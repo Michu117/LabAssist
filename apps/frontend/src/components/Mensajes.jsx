@@ -2,7 +2,7 @@ export function MensajeError({ error }) {
   if (!error) return null;
   return (
     <div className="error" role="alert">
-      <strong>{error.mensaje}</strong>
+      <strong>{error.mensaje || error.message || "Ocurrió un error"}</strong>
       {error.detalles && error.detalles.length > 0 && (
         <ul>
           {error.detalles.map((detalle, indice) => (

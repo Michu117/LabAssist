@@ -15,4 +15,19 @@ async function crear(req, res) {
   res.status(201).json({ ok: true, data: { laboratorio } });
 }
 
-module.exports = { listar, consultarComputadoras, crear };
+async function listarLectores(req, res) {
+  const lectores = await servicio.listarLectores();
+  res.json({ ok: true, data: { lectores } });
+}
+
+async function crearLector(req, res) {
+  const lector = await servicio.crearLector(req.body);
+  res.status(201).json({ ok: true, data: { lector } });
+}
+
+async function asignarLector(req, res) {
+  const lector = await servicio.asignarLector(req.params.lectorId, req.body.laboratorio_id);
+  res.json({ ok: true, data: { lector } });
+}
+
+module.exports = { listar, consultarComputadoras, crear, listarLectores, crearLector, asignarLector };

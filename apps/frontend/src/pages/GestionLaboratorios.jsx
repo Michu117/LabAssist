@@ -1,8 +1,16 @@
 import { useEffect, useState } from "react";
-import { consultarComputadoras, crearLaboratorio, listarLaboratorios } from "../api/laboratorios";
+import {
+  asignarLector,
+  consultarComputadoras,
+  crearLaboratorio,
+  crearLector,
+  listarLectores,
+  listarLaboratorios,
+} from "../api/laboratorios";
 import { MensajeError, MensajeExito } from "../components/Mensajes";
 
 const VACIO = { codigo: "", nombre: "", cantidad_computadoras: "" };
+const LECTOR_VACIO = { id: "", capacidad: "" };
 
 function nombreLaboratorio(laboratorio) {
   return `${laboratorio.codigo || "Sin código"} · ${laboratorio.nombre}`;
@@ -62,6 +70,10 @@ export function GestionLaboratorios() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
   const [mensaje, setMensaje] = useState("");
+  const [lectores, setLectores] = useState(null);
+  const [lectorFormulario, setLectorFormulario] = useState(LECTOR_VACIO);
+  const [lectorGuardando, setLectorGuardando] = useState(false);
+  const [lectorError, setLectorError] = useState(null);
 
   useEffect(() => {
     let vigente = true;
@@ -69,6 +81,12 @@ export function GestionLaboratorios() {
       .then((data) => vigente && setListado(data))
       .catch((problema) => vigente && setListado({ error: problema }));
     return () => { vigente = false; };
+  }, [revision]);
+
+  useEffect(() => {
+    listarLectores()
+      .then((data) => setLectores(data.lectores))
+      .catch((problema) => setLectorError(problema));
   }, [revision]);
 
   function cambiar(evento) {
@@ -79,6 +97,46 @@ export function GestionLaboratorios() {
   function recargar() {
     setListado(null);
     setRevision((valor) => valor + 1);
+  }
+
+  function cambiarLector(evento) {
+    const { name, value } = evento.target;
+    setLectorFormulario((actual) => ({ ...actual, [name]: value }));
+  }
+
+  async function guardarLector(evento) {
+    evento.preventDefault();
+    if (lectorGuardando) return;
+    setLectorGuardando(true);
+    setLectorError(null);
+    try {
+      await crearLector({
+        id: lectorFormulario.id,
+        capacidad: Number(lectorFormulario.capacidad),
+        laboratorio_id: null,
+      });
+      setLectorFormulario(LECTOR_VACIO);
+      setMensaje("Lector biométrico registrado. Puedes asociarlo a un laboratorio cuando lo necesites.");
+      recargar();
+    } catch (problema) {
+      setLectorError(problema);
+    } finally {
+      setLectorGuardando(false);
+    }
+  }
+
+  async function cambiarLaboratorioLector(lector, evento) {
+    const laboratorioId = evento.target.value ? Number(evento.target.value) : null;
+    try {
+      const { lector: actualizado } = await asignarLector(lector.id, laboratorioId);
+      setLectores((actuales) => actuales.map((actual) => (
+        actual.id === actualizado.id
+          ? { ...actual, laboratorio_id: actualizado.laboratorio_id }
+          : actual
+      )));
+    } catch (problema) {
+      setLectorError(problema);
+    }
   }
 
   async function guardar(evento) {
@@ -132,6 +190,51 @@ export function GestionLaboratorios() {
         </label>
         <button type="submit" disabled={guardando}>{guardando ? "Registrando…" : "Registrar laboratorio"}</button>
       </form>
+
+      <section aria-labelledby="lectores-registrados">
+        <h2 id="lectores-registrados">Lectores biométricos</h2>
+        <p>Registra el lector sin laboratorio para enrolar huellas. La asociación al laboratorio se usa después para asistencia y reservas.</p>
+        <MensajeError error={lectorError} />
+        <form onSubmit={guardarLector}>
+          <div className="fila">
+            <label>
+              Identificador del lector
+              <input name="id" value={lectorFormulario.id} onChange={cambiarLector} placeholder="esp32-as608-01" required maxLength={100} disabled={lectorGuardando} />
+            </label>
+            <label>
+              Capacidad de huellas
+              <input name="capacidad" type="number" min={1} max={65535} value={lectorFormulario.capacidad} onChange={cambiarLector} required disabled={lectorGuardando} />
+            </label>
+          </div>
+          <button type="submit" disabled={lectorGuardando}>{lectorGuardando ? "Registrando…" : "Registrar lector"}</button>
+        </form>
+        {!lectores && <p className="cargando">Cargando lectores…</p>}
+        {lectores?.length === 0 && <p className="vacio">No hay lectores registrados.</p>}
+        {lectores?.length > 0 && (
+          <ul className="lista">
+            {lectores.map((lector) => (
+              <li key={lector.id} className="elemento">
+                <div className="elemento-datos">
+                  <strong className="elemento-nombre">{lector.id}</strong>
+                  <span className="elemento-meta">Capacidad: {lector.capacidad}</span>
+                </div>
+                <label>
+                  Laboratorio
+                  <select
+                    value={lector.laboratorio_id ?? ""}
+                    onChange={(evento) => cambiarLaboratorioLector(lector, evento)}
+                  >
+                    <option value="">Sin laboratorio</option>
+                    {laboratorios?.map((lab) => (
+                      <option key={lab.id} value={lab.id}>{nombreLaboratorio(lab)}</option>
+                    ))}
+                  </select>
+                </label>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section aria-labelledby="laboratorios-registrados">
         <h2 id="laboratorios-registrados">Laboratorios registrados</h2>
